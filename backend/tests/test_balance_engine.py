@@ -28,7 +28,7 @@ def test_balance_engine_tracks_expenses_and_settlements():
 
     assert {"user_id": alice.id, "net": "30.00"} in result["balances"]
     assert {"user_id": bob.id, "net": "-30.00"} in result["balances"]
-    assert len(result["trace"]) == 4
+    assert len(result["trace"]) == 5
 
 
 @pytest.mark.django_db
