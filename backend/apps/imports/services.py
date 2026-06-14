@@ -3,6 +3,7 @@ import io
 import time
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from unittest import result
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -30,7 +31,12 @@ DETECTORS = [
 
 
 class CsvImportService:
-    required_fields = ["date", "amount", "paid_by", "description", "group", "currency"]
+    required_fields = [
+    "date",
+    "amount",
+    "paid_by",
+    "description"
+]
 
     def parse(self, *, file, uploaded_by, group=None):
         started = time.monotonic()
@@ -116,13 +122,25 @@ class CsvImportService:
                 skipped += 1
                 continue
 
-            expense = self.create_expense_from_row(
-                row["data"],
-                session.uploaded_by
-            )
+            try:
+                expense = self.create_expense_from_row(
+                    row["data"],
+                    session.uploaded_by,
+                    session.group
+                )   
+                
+                imported_expense_ids.append(expense.id)
+                imported += 1        
 
-            imported_expense_ids.append(expense.id)
-            imported += 1
+            except Exception as e:
+                action_log.append({
+                    "row_number": row_number,
+                    "action": "skipped_runtime_error",
+                    "error": str(e)
+                })
+
+                skipped += 1
+                continue
 
         session.status = ImportSession.Status.IMPORTED
         session.completed_at = timezone.now()
@@ -150,11 +168,37 @@ class CsvImportService:
 
         return session
 
-    def create_expense_from_row(self, data, actor):
-        group = self.resolve_group(data["group"])
+    def create_expense_from_row(
+    self,
+    data,
+    actor,
+    default_group=None
+):
+        group = default_group
+
+        if not group:
+            group_name = data.get("group")
+
+            if not group_name:
+                raise ValueError(
+                    "No group provided for import"
+                )
+
+            group = self.resolve_group(
+                group_name
+        )
         paid_by = self.resolve_user(data["paid_by"])
-        currency = Currency.objects.get(code=str(data["currency"]).upper())
-        amount = Decimal(str(data["amount"]))
+        currency_code = data.get("currency")
+
+        if not currency_code:
+            currency_code = "INR"
+
+        currency = Currency.objects.get(
+            code=str(currency_code).upper()
+        )
+        amount = Decimal(
+    str(data["amount"]).replace(",", "")
+)
         exchange_rate = Decimal(str(data.get("exchange_rate_to_group") or "1.000000"))
         expense = Expense.objects.create(
             group=group,
@@ -187,11 +231,19 @@ class CsvImportService:
                 ExpenseParticipant.objects.create(expense=expense, user=user, share_amount=amount)
             return
         if split_type == Expense.SplitType.EXACT:
-            shares = self.parse_decimal_map(data.get("shares") or data.get("split_amounts"))
+            shares = self.parse_decimal_map(
+    data.get("shares")
+    or data.get("split_amounts")
+    or data.get("split_details")
+)
             for user in participants:
                 ExpenseParticipant.objects.create(expense=expense, user=user, share_amount=self.decimal_for_user(shares, user))
             return
-        percentages = self.parse_decimal_map(data.get("percentages") or data.get("split_percentages"))
+        percentages = self.parse_decimal_map(
+    data.get("percentages")
+    or data.get("split_percentages")
+    or data.get("split_details")
+)
         for user in participants:
             pct = self.decimal_for_user(percentages, user)
             share = (expense.amount * pct / Decimal("100")).quantize(Decimal("0.01"))
@@ -249,27 +301,56 @@ class CsvImportService:
 
     def normalize_split_type(self, value):
         normalized = normalize_identifier(value).replace(" ", "_")
-        mapping = {"equal": Expense.SplitType.EQUAL, "exact": Expense.SplitType.EXACT, "exact_amount": Expense.SplitType.EXACT, "percentage": Expense.SplitType.PERCENTAGE, "percent": Expense.SplitType.PERCENTAGE}
+        mapping = {
+    "equal": Expense.SplitType.EQUAL,
+
+    "exact": Expense.SplitType.EXACT,
+    "exact_amount": Expense.SplitType.EXACT,
+    "unequal": Expense.SplitType.EXACT,
+    "share": Expense.SplitType.EXACT,
+
+    "percentage": Expense.SplitType.PERCENTAGE,
+    "percent": Expense.SplitType.PERCENTAGE,
+}
         if normalized not in mapping:
             raise ValueError(f"Unsupported split type: {value}")
         return mapping[normalized]
 
     def parse_decimal_map(self, raw):
         result = {}
-        for item in str(raw or "").replace(";", ",").split(","):
-            if not item.strip():
+
+        for item in str(raw or "").split(";"):
+            item = item.strip()
+
+            if not item:
                 continue
-            if ":" not in item:
-                raise ValueError(f"Invalid split map item: {item}")
-            key, value = item.split(":", 1)
+
+            parts = item.rsplit(" ", 1)
+
+            if len(parts) != 2:
+                continue
+
+            key, value = parts
+
             try:
-                result[normalize_identifier(key)] = Decimal(value.strip())
-            except InvalidOperation as exc:
-                raise ValueError(f"Invalid split value for {key}") from exc
+                value = value.replace("%", "").strip()
+
+                result[
+                    normalize_identifier(key)
+                ] = Decimal(value)
+
+            except InvalidOperation:
+                continue
+
         return result
 
     def decimal_for_user(self, values, user):
-        for key in [normalize_identifier(user.email), normalize_identifier(user.full_name)]:
+        for key in [
+          normalize_identifier(user.email),
+            normalize_identifier(user.full_name),
+            normalize_identifier(user.full_name.split()[0]),
+        ]:
             if key in values:
-                return values[key]
+              return values[key]
+
         raise ValueError(f"Missing split value for {user.email}")

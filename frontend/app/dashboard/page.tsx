@@ -11,7 +11,6 @@ import {
   FileSpreadsheet,
   Activity,
   ShieldCheck,
-  CheckCircle,
   Plus,
   Upload,
 } from "lucide-react";
@@ -30,17 +29,14 @@ type Summary = {
 
 export default function DashboardPage() {
   const router = useRouter();
-
   const [summary, setSummary] = useState<Summary | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
-
     if (!token) {
       router.replace("/login");
       return;
     }
-
     api<Summary>("/reports/summary/", { token })
       .then(setSummary)
       .catch(() =>
@@ -60,295 +56,478 @@ export default function DashboardPage() {
       value: summary?.groups ?? 0,
       icon: Users,
       subtitle: "Active Groups",
-      bg: "bg-blue-50",
+      accent: "#3B82F6",
+      bg: "#EEF2FF",
     },
     {
       label: "Expenses",
       value: summary?.expenses ?? 0,
       icon: Receipt,
       subtitle: "Tracked Expenses",
-      bg: "bg-orange-50",
+      accent: "#F59E0B",
+      bg: "#FFFBEB",
     },
     {
       label: "Total Spend",
       value: `₹${summary?.total_expense_amount ?? "0"}`,
       icon: IndianRupee,
       subtitle: "Across All Groups",
-      bg: "bg-green-50",
+      accent: "#10B981",
+      bg: "#ECFDF5",
     },
     {
       label: "Settlements",
       value: summary?.settlements ?? 0,
       icon: ArrowLeftRight,
       subtitle: "Recorded",
-      bg: "bg-purple-50",
+      accent: "#8B5CF6",
+      bg: "#F5F3FF",
     },
     {
       label: "Imports",
       value: summary?.imports ?? 0,
       icon: FileSpreadsheet,
       subtitle: "CSV Uploads",
-      bg: "bg-red-50",
+      accent: "#EF4444",
+      bg: "#FEF2F2",
     },
   ];
 
   return (
     <AppShell>
-      {/* Hero Section */}
-      <Card className="mb-8 border-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white shadow-xl">
-        <CardContent className="p-8">
-          <h1 className="text-4xl font-bold">
-            Shared Expense Management
-          </h1>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-          <p className="mt-3 max-w-2xl text-slate-200">
-            Track expenses, settlements, balances, imports,
-            membership timelines, and audit history from one
-            centralized platform.
-          </p>
+        .dash-hero {
+          margin-bottom: 2rem;
+          border-radius: 20px;
+          overflow: hidden;
+          background: linear-gradient(135deg, #3B82F6 0%, #6366F1 60%, #818CF8 100%);
+          box-shadow: 0 8px 32px rgba(99,102,241,0.25);
+          padding: 2.5rem;
+          color: white;
+          position: relative;
+        }
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/groups">
-              <button className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100">
-                <Plus size={16} />
-                Create Group
-              </button>
-            </Link>
+        .dash-hero::before {
+          content: '';
+          position: absolute;
+          top: -60px; right: -60px;
+          width: 220px; height: 220px;
+          background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+          pointer-events: none;
+        }
 
-            <Link href="/imports">
-              <button className="flex items-center gap-2 rounded-xl border border-white/30 px-4 py-2 text-sm transition hover:bg-white/10">
-                <Upload size={16} />
-                Import CSV
-              </button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+        .dash-hero::after {
+          content: '';
+          position: absolute;
+          bottom: -40px; left: 30%;
+          width: 160px; height: 160px;
+          background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+          pointer-events: none;
+        }
 
-      {/* Statistics */}
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
+        .dash-hero h1 {
+          font-size: 1.875rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          line-height: 1.15;
+          margin-bottom: 0.625rem;
+        }
 
+        .dash-hero p {
+          font-size: 0.9rem;
+          color: rgba(255,255,255,0.8);
+          max-width: 520px;
+          line-height: 1.6;
+        }
+
+        .hero-actions {
+          margin-top: 1.5rem;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+
+        .hero-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: #FFFFFF;
+          color: #1E2A45;
+          font-size: 0.8rem;
+          font-weight: 600;
+          padding: 0.5rem 1.1rem;
+          border-radius: 10px;
+          border: none;
+          cursor: pointer;
+          text-decoration: none;
+          transition: background 0.15s, transform 0.1s;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+        .hero-btn-primary:hover { background: #F0F4FF; transform: translateY(-1px); }
+
+        .hero-btn-outline {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: rgba(255,255,255,0.12);
+          color: white;
+          font-size: 0.8rem;
+          font-weight: 600;
+          padding: 0.5rem 1.1rem;
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.25);
+          cursor: pointer;
+          text-decoration: none;
+          transition: background 0.15s, transform 0.1s;
+        }
+
+        .hero-btn-outline:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+
+        /* Metric cards */
+        .metrics-grid {
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: repeat(2, 1fr);
+          margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+          .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (min-width: 1280px) {
+          .metrics-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+
+        .metric-card {
+          background: #FFFFFF;
+          border: 1px solid #DDE3F0;
+          border-radius: 16px;
+          padding: 1.25rem;
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(99,102,241,0.1);
+        }
+
+        .metric-icon-wrap {
+          width: 40px; height: 40px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 1rem;
+        }
+
+        .metric-label {
+          font-size: 0.72rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #94A3B8;
+        }
+
+        .metric-value {
+          font-size: 1.75rem;
+          font-weight: 800;
+          color: #1E2A45;
+          letter-spacing: -0.03em;
+          margin-top: 0.25rem;
+          line-height: 1;
+        }
+
+        .metric-subtitle {
+          font-size: 0.7rem;
+          color: #94A3B8;
+          margin-top: 0.35rem;
+        }
+
+        /* Feature cards */
+        .feature-grid {
+          display: grid;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+          .feature-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .feature-card {
+          background: #FFFFFF;
+          border: 1px solid #DDE3F0;
+          border-radius: 16px;
+          padding: 1.5rem;
+          transition: box-shadow 0.15s;
+        }
+
+        .feature-card:hover {
+          box-shadow: 0 8px 24px rgba(99,102,241,0.08);
+        }
+
+        .feature-card-header {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+        }
+
+        .feature-icon {
+          width: 36px; height: 36px;
+          background: #EEF2FF;
+          border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          color: #6366F1;
+          flex-shrink: 0;
+        }
+
+        .feature-title {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #1E2A45;
+          letter-spacing: -0.01em;
+        }
+
+        .feature-desc {
+          font-size: 0.825rem;
+          color: #64748B;
+          line-height: 1.5;
+          margin-bottom: 0.875rem;
+        }
+
+        .feature-list {
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+
+        .feature-list li {
+          font-size: 0.8rem;
+          color: #475569;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .feature-list li::before {
+          content: '';
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3B82F6, #6366F1);
+          flex-shrink: 0;
+        }
+
+        /* Insights */
+        .insights-grid {
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: repeat(2, 1fr);
+          margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 1280px) {
+          .insights-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .insight-card {
+          background: #FFFFFF;
+          border: 1px solid #DDE3F0;
+          border-radius: 16px;
+          padding: 1.25rem;
+        }
+
+        .insight-label {
+          font-size: 0.72rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #94A3B8;
+        }
+
+        .insight-value {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #1E2A45;
+          letter-spacing: -0.025em;
+          margin-top: 0.4rem;
+          line-height: 1;
+        }
+
+        .insight-sub {
+          font-size: 0.72rem;
+          color: #94A3B8;
+          margin-top: 0.35rem;
+        }
+
+        /* Activity */
+        .activity-card {
+          background: #FFFFFF;
+          border: 1px solid #DDE3F0;
+          border-radius: 16px;
+          padding: 1.5rem;
+        }
+
+        .activity-title {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #1E2A45;
+          letter-spacing: -0.01em;
+          margin-bottom: 1rem;
+        }
+
+        .activity-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.625rem;
+        }
+
+        .activity-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #F8FAFF;
+          border: 1px solid #EEF2FF;
+          border-radius: 12px;
+          padding: 0.875rem 1rem;
+        }
+
+        .activity-name {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #1E2A45;
+        }
+
+        .activity-sub {
+          font-size: 0.75rem;
+          color: #94A3B8;
+          margin-top: 0.15rem;
+        }
+
+        .activity-badge {
+          font-size: 0.65rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #6366F1;
+          background: #EEF2FF;
+          padding: 0.2rem 0.6rem;
+          border-radius: 20px;
+        }
+
+        .section-label {
+          font-size: 0.72rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: #94A3B8;
+          margin-bottom: 0.75rem;
+        }
+      `}</style>
+
+      {/* Hero */}
+      <div className="dash-hero">
+        <h1>Shared Expense<br />Management</h1>
+        <p>Track expenses, settlements, balances, imports, and audit history from one centralized platform.</p>
+        <div className="hero-actions">
+          <Link href="/groups" className="hero-btn-primary">
+            <Plus size={14} /> Create Group
+          </Link>
+          <Link href="/imports" className="hero-btn-outline">
+            <Upload size={14} /> Import CSV
+          </Link>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <p className="section-label">Overview</p>
+      <div className="metrics-grid">
+        {metrics.map((m) => {
+          const Icon = m.icon;
           return (
-            <Card
-              key={metric.label}
-              className="transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
-            >
-              <CardContent className="p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <div
-                    className={`rounded-xl p-3 ${metric.bg}`}
-                  >
-                    <Icon size={22} />
-                  </div>
-                </div>
-
-                <p className="text-sm text-slate-500">
-                  {metric.label}
-                </p>
-
-                <h2 className="mt-2 text-3xl font-bold">
-                  {metric.value}
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  {metric.subtitle}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="metric-card" key={m.label}>
+              <div className="metric-icon-wrap" style={{ background: m.bg }}>
+                <Icon size={18} style={{ color: m.accent }} />
+              </div>
+              <div className="metric-label">{m.label}</div>
+              <div className="metric-value">{m.value}</div>
+              <div className="metric-subtitle">{m.subtitle}</div>
+            </div>
           );
         })}
-      </section>
+      </div>
 
       {/* Feature Cards */}
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        <Card className="transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <Activity
-                className="text-primary"
-                size={20}
-              />
+      <p className="section-label">Platform Capabilities</p>
+      <div className="feature-grid">
+        <div className="feature-card">
+          <div className="feature-card-header">
+            <div className="feature-icon"><Activity size={18} /></div>
+            <span className="feature-title">Balance Engine</span>
+          </div>
+          <p className="feature-desc">Calculates balances across all expenses and settlements in real time.</p>
+          <ul className="feature-list">
+            <li>Join/Leave Membership Aware</li>
+            <li>Settlement Aware</li>
+            <li>Full Audit Trace Support</li>
+            <li>Debt Simplification Engine</li>
+          </ul>
+        </div>
 
-              <h2 className="text-lg font-semibold">
-                Balance Engine
-              </h2>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3 text-sm text-slate-600">
-            <p>
-              Calculates balances across all expenses and
-              settlements.
-            </p>
-
-            <ul className="space-y-2">
-              <li>✓ Join/Leave Membership Aware</li>
-              <li>✓ Settlement Aware</li>
-              <li>✓ Full Audit Trace Support</li>
-              <li>✓ Debt Simplification Engine</li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-all duration-200 hover:shadow-lg">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <ShieldCheck
-                className="text-primary"
-                size={20}
-              />
-
-              <h2 className="text-lg font-semibold">
-                CSV Import Pipeline
-              </h2>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3 text-sm text-slate-600">
-            <p>
-              Import expense history with automated anomaly
-              detection and review workflows.
-            </p>
-
-            <ul className="space-y-2">
-              <li>✓ Validation Rules</li>
-              <li>✓ Duplicate Detection</li>
-              <li>✓ Membership Checks</li>
-              <li>✓ Import Reporting</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </section>
+        <div className="feature-card">
+          <div className="feature-card-header">
+            <div className="feature-icon"><ShieldCheck size={18} /></div>
+            <span className="feature-title">CSV Import Pipeline</span>
+          </div>
+          <p className="feature-desc">Import expense history with automated anomaly detection and review workflows.</p>
+          <ul className="feature-list">
+            <li>Validation Rules</li>
+            <li>Duplicate Detection</li>
+            <li>Membership Checks</li>
+            <li>Import Reporting</li>
+          </ul>
+        </div>
+      </div>
 
       {/* Quick Insights */}
-      <section className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500">
-              Most Active Area
-            </p>
-
-            <h3 className="mt-2 text-xl font-bold">
-              Groups
-            </h3>
-
-            <p className="mt-1 text-sm text-slate-400">
-              {summary?.groups ?? 0} managed groups
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500">
-              Expense Records
-            </p>
-
-            <h3 className="mt-2 text-xl font-bold">
-              {summary?.expenses ?? 0}
-            </h3>
-
-            <p className="mt-1 text-sm text-slate-400">
-              Transactions tracked
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500">
-              Total Imported
-            </p>
-
-            <h3 className="mt-2 text-xl font-bold">
-              {summary?.imports ?? 0}
-            </h3>
-
-            <p className="mt-1 text-sm text-slate-400">
-              CSV sessions processed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-slate-500">
-              Settlement Activity
-            </p>
-
-            <h3 className="mt-2 text-xl font-bold">
-              {summary?.settlements ?? 0}
-            </h3>
-
-            <p className="mt-1 text-sm text-slate-400">
-              Recorded settlements
-            </p>
-          </CardContent>
-        </Card>
-      </section>
+      <p className="section-label">Quick Insights</p>
+      <div className="insights-grid">
+        {[
+          { label: "Most Active Area", value: "Groups", sub: `${summary?.groups ?? 0} managed groups` },
+          { label: "Expense Records", value: summary?.expenses ?? 0, sub: "Transactions tracked" },
+          { label: "Total Imported", value: summary?.imports ?? 0, sub: "CSV sessions processed" },
+          { label: "Settlement Activity", value: summary?.settlements ?? 0, sub: "Recorded settlements" },
+        ].map((item) => (
+          <div className="insight-card" key={item.label}>
+            <div className="insight-label">{item.label}</div>
+            <div className="insight-value">{item.value}</div>
+            <div className="insight-sub">{item.sub}</div>
+          </div>
+        ))}
+      </div>
 
       {/* Recent Activity */}
-      <section className="mt-8">
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold">
-              Recent Activity
-            </h2>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between rounded-xl border p-4">
+      <p className="section-label">Recent Activity</p>
+      <div className="activity-card">
+        <div className="activity-list">
+          {[
+            { name: "Expense Created", sub: "Pizza Party Expense Added" },
+            { name: "Settlement Recorded", sub: "Partial repayment processed" },
+            { name: "CSV Import Completed", sub: "Import session finished successfully" },
+          ].map((item) => (
+            <div className="activity-item" key={item.name}>
               <div>
-                <p className="font-medium">
-                  Expense Created
-                </p>
-
-                <p className="text-sm text-slate-500">
-                  Pizza Party Expense Added
-                </p>
+                <div className="activity-name">{item.name}</div>
+                <div className="activity-sub">{item.sub}</div>
               </div>
-
-              <span className="text-xs text-slate-400">
-                Recent
-              </span>
+              <span className="activity-badge">Recent</span>
             </div>
-
-            <div className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <p className="font-medium">
-                  Settlement Recorded
-                </p>
-
-                <p className="text-sm text-slate-500">
-                  Partial repayment processed
-                </p>
-              </div>
-
-              <span className="text-xs text-slate-400">
-                Recent
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <p className="font-medium">
-                  CSV Import Completed
-                </p>
-
-                <p className="text-sm text-slate-500">
-                  Import session finished successfully
-                </p>
-              </div>
-
-              <span className="text-xs text-slate-400">
-                Recent
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+          ))}
+        </div>
+      </div>
     </AppShell>
   );
 }

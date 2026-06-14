@@ -68,7 +68,8 @@ class AmountDetector(AnomalyDetector):
             if value in (None, ""):
                 continue
             try:
-                amount = Decimal(str(value))
+                cleaned_value = str(value).replace(",", "").strip()
+                amount = Decimal(cleaned_value)
             except InvalidOperation:
                 anomalies.append(error(row, self.code, "Amount is not a valid decimal", {"value": value}))
                 continue

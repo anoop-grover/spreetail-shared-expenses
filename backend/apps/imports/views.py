@@ -1,3 +1,5 @@
+import traceback
+
 from apps.groups.models import Group
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -27,11 +29,41 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
         write_audit(request.user, "import.parsed", session, after=session.report)
         return Response(ImportSessionSerializer(session).data, status=status.HTTP_201_CREATED)
 
+    # @action(detail=True, methods=["post"])
+    # def review(self, request, pk=None):
+    #     session = self.get_object()
+    #     serializer = ImportReviewSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     session = CsvImportService().apply_review_actions(session=session, actions=serializer.validated_data["actions"])
+    #     write_audit(request.user, "import.reviewed", session, after=session.report)
+    #     return Response(ImportSessionSerializer(session).data)
+
     @action(detail=True, methods=["post"])
     def review(self, request, pk=None):
-        session = self.get_object()
-        serializer = ImportReviewSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        session = CsvImportService().apply_review_actions(session=session, actions=serializer.validated_data["actions"])
-        write_audit(request.user, "import.reviewed", session, after=session.report)
-        return Response(ImportSessionSerializer(session).data)
+        try:
+            session = self.get_object()
+
+            serializer = ImportReviewSerializer(
+                data=request.data
+            )
+
+            serializer.is_valid(
+                raise_exception=True
+            )
+
+            session = CsvImportService().apply_review_actions(
+                session=session,
+                actions=serializer.validated_data["actions"],
+            )
+
+            return Response(
+                ImportSessionSerializer(session).data
+            )
+
+        except Exception as e:
+            traceback.print_exc()
+
+            return Response(
+                {"error": str(e)},
+                status=500,
+            )   
