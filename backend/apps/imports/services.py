@@ -7,6 +7,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
+from requests import session
 
 from apps.expenses.models import Expense, ExpenseHistory, ExpenseParticipant
 from apps.groups.models import Currency, Group, GroupMembership
@@ -62,37 +63,91 @@ class CsvImportService:
 
     @transaction.atomic
     def apply_review_actions(self, *, session, actions):
-        actions_by_row = {int(item["row_number"]): item["action"] for item in actions}
-        error_rows = set(session.anomalies.filter(severity="error").values_list("row_number", flat=True))
-        imported = skipped = 0
+        actions_by_row = {
+            int(item["row_number"]): item["action"]
+            for item in actions
+            }
+
+        error_rows = set(
+            session.anomalies.filter(
+                severity="error"
+            ).values_list(
+                "row_number",
+                flat=True
+            )
+        )
+
+        imported = 0
+        skipped = 0
         imported_expense_ids = []
         action_log = []
+
         for anomaly in session.anomalies.all():
             if anomaly.row_number in actions_by_row:
                 anomaly.action_taken = actions_by_row[anomaly.row_number]
                 anomaly.save(update_fields=["action_taken"])
+
         for row in session.normalized_rows:
             row_number = row["row_number"]
-            action = actions_by_row.get(row_number, "ignore" if row_number in error_rows else "import")
-            action_log.append({"row_number": row_number, "action": action})
+
+            requested_action = actions_by_row.get(
+                row_number,
+                "ignore" if row_number in error_rows else "import"
+            )
+
+            # HARD BLOCK ALL ERROR ROWS
+            if row_number in error_rows:
+                action_log.append({
+                    "row_number": row_number,
+                    "action": "blocked_error"
+                })
+
+                skipped += 1
+                continue
+
+            action = requested_action
+
+            action_log.append({
+                "row_number": row_number,
+                "action": action
+            })
+
             if action in {"ignore", "merge"}:
                 skipped += 1
-            else:
-                expense = self.create_expense_from_row(row["data"], session.uploaded_by)
-                imported_expense_ids.append(expense.id)
-                imported += 1
+                continue
+
+            expense = self.create_expense_from_row(
+                row["data"],
+                session.uploaded_by
+            )
+
+            imported_expense_ids.append(expense.id)
+            imported += 1
+
         session.status = ImportSession.Status.IMPORTED
         session.completed_at = timezone.now()
+
         session.report = {
             **session.report,
             "rows_imported": imported,
             "rows_skipped": skipped,
             "actions_taken": action_log,
             "imported_expense_ids": imported_expense_ids,
-            "import_duration_ms": session.report.get("import_duration_ms", 0),
+            "import_duration_ms": session.report.get(
+                "import_duration_ms",
+                0
+            ),
             "import_timestamp": timezone.now().isoformat(),
         }
-        session.save(update_fields=["status", "completed_at", "report"])
+
+        session.save(
+            update_fields=[
+                "status",
+                "completed_at",
+                "report"
+            ]
+        )
+
         return session
 
     def create_expense_from_row(self, data, actor):
