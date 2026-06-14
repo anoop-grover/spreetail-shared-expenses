@@ -53,7 +53,7 @@ export default function GroupDetailsPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) { router.replace("/login"); return; }
       try {
-        const usersData = await api("/users/", { token });
+        const usersData = await api<any[]>("/users/", { token });
         setUsers(usersData);
         const data = await api<Group>(`/groups/${params.id}/`, { token });
         setGroup(data);
