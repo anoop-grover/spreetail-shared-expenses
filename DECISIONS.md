@@ -1,85 +1,27 @@
+# DECISIONS.md
+
 # Engineering Decision Log
 
-This document records the significant product and engineering decisions made during implementation, the alternatives considered, and the reasoning behind the final choices.
+This document records the major architectural, product, and implementation decisions made during development of the Shared Expenses Application.
+
+Each decision includes:
+
+* Problem statement
+* Alternatives considered
+* Final choice
+* Reasoning
 
 ---
 
-# Decision 1: Membership Timeline Support
+# Decision 1: Balance Calculation Strategy
 
 ## Problem
 
-Group membership changes over time.
-
-In the assignment scenario:
-
-* Meera leaves at the end of March.
-* Sam joins in mid-April.
-
-Expenses should only affect users who were active members at the time the expense occurred.
+Users need accurate balances that can always be explained and reproduced.
 
 ## Options Considered
 
-### Option A: Current Member Snapshot Only
-
-Store only the current list of group members.
-
-Pros:
-
-* Simple implementation
-
-Cons:
-
-* Historical balances become incorrect.
-* Cannot support users joining or leaving.
-
-Rejected.
-
-### Option B: Membership History Tracking
-
-Store membership start and end dates.
-
-Pros:
-
-* Supports historical calculations.
-* Correctly handles joins and leaves.
-* Matches assignment requirements.
-
-Cons:
-
-* Additional validation complexity.
-
-Chosen.
-
-## Final Decision
-
-Implemented a `GroupMembership` model with:
-
-* `joined_at`
-* `left_at`
-
-Expenses and settlements validate membership status using the transaction date.
-
----
-
-# Decision 2: Balance Calculation Strategy
-
-## Problem
-
-Users need both simple debt summaries and complete calculation transparency.
-
-Aisha wants:
-
-> "Who pays whom?"
-
-Rohan wants:
-
-> "Show exactly how that number was calculated."
-
-## Options Considered
-
-### Option A: Persist Running Balances
-
-Update balance records whenever a transaction occurs.
+### Option A: Store Running Balances
 
 Pros:
 
@@ -87,97 +29,209 @@ Pros:
 
 Cons:
 
+* Can become inconsistent
 * Difficult to audit
-* Can drift from source data
-* Hard to explain during review
+* Requires synchronization logic
 
 Rejected.
 
-### Option B: Recalculate From Source Transactions
+---
 
-Compute balances from expenses and settlements.
+### Option B: Calculate Balances From Transactions
 
 Pros:
 
-* Fully auditable
-* Easy to trace
-* Deterministic
+* Always derived from source data
+* Easier to validate
+* Fully reproducible
 
 Cons:
 
-* Slightly more computational work
+* Additional computation when viewing balances
 
 Chosen.
 
+---
+
 ## Final Decision
 
-Balances are derived from source transactions and trace rows are retained to explain every calculation.
+Balances are calculated from recorded expenses and settlements rather than stored as mutable totals.
 
 ---
 
-# Decision 3: CSV Import Architecture
+# Decision 2: Membership Management
 
 ## Problem
 
-The assignment requires importing a CSV containing unknown data-quality issues.
-
-The official CSV was unavailable during implementation.
+Groups need controlled membership management.
 
 ## Options Considered
 
-### Option A: Hardcode CSV Assumptions
-
-Build import logic around assumed columns and anomalies.
+### Option A: Store Members Directly Inside Groups
 
 Pros:
 
-* Faster implementation
+* Simple implementation
 
 Cons:
 
-* Risks incorrect behavior
-* Violates engineering reliability
-* Difficult to maintain
+* Difficult to extend
+* Poor relationship tracking
 
 Rejected.
 
-### Option B: Generic Import Framework
+---
 
-Build a configurable import pipeline with anomaly detection.
+### Option B: Separate Membership Model
 
 Pros:
 
-* Works with unknown datasets
-* Extensible
-* Supports review workflows
+* Clear relationship management
+* Easier validation
+* Scalable design
 
 Cons:
 
-* More initial development effort
+* Additional database table
 
 Chosen.
 
+---
+
 ## Final Decision
 
-Implemented:
-
-Upload → Parse → Validate → Detect Anomalies → Review → Import → Generate Report
-
-The importer uses pluggable anomaly detectors and avoids CSV-specific assumptions.
+Memberships are stored in a dedicated Membership model linking users and groups.
 
 ---
 
-# Decision 4: Anomaly Resolution Workflow
+# Decision 3: Expense Split Architecture
 
 ## Problem
 
-Meera requested approval before any data is modified or removed.
+Different expenses require different sharing strategies.
 
 ## Options Considered
 
-### Option A: Automatic Cleanup
+### Option A: Equal Splits Only
 
-Automatically resolve duplicates and invalid rows.
+Pros:
+
+* Very simple
+
+Cons:
+
+* Limited flexibility
+
+Rejected.
+
+---
+
+### Option B: Multiple Split Types
+
+Pros:
+
+* Flexible
+* Matches real-world usage
+* Supports assignment requirements
+
+Cons:
+
+* Additional validation rules
+
+Chosen.
+
+---
+
+## Final Decision
+
+The application supports:
+
+* Equal Split
+* Exact Amount Split
+* Percentage Split
+
+---
+
+# Decision 4: CSV Import Workflow
+
+## Problem
+
+Imported data may contain mistakes or inconsistencies.
+
+## Options Considered
+
+### Option A: Direct Import
+
+Pros:
+
+* Fast
+
+Cons:
+
+* Invalid data enters system
+* Difficult to correct later
+
+Rejected.
+
+---
+
+### Option B: Review Before Import
+
+Pros:
+
+* Safer
+* Transparent
+* Prevents bad data
+
+Cons:
+
+* Additional workflow
+
+Chosen.
+
+---
+
+## Final Decision
+
+The import process follows:
+
+Upload
+
+↓
+
+Parse
+
+↓
+
+Validate
+
+↓
+
+Detect Anomalies
+
+↓
+
+Review
+
+↓
+
+Import
+
+↓
+
+Generate Report
+
+---
+
+# Decision 5: Duplicate Handling
+
+## Problem
+
+Imported CSV files may contain duplicate expense records.
+
+## Options Considered
+
+### Option A: Automatically Remove Duplicates
 
 Pros:
 
@@ -185,138 +239,49 @@ Pros:
 
 Cons:
 
-* Loss of user control
-* Risk of incorrect modifications
+* Risk of removing valid records
 
 Rejected.
+
+---
 
 ### Option B: User Review Workflow
 
-Present anomalies and require user decisions.
-
 Pros:
 
-* Transparent
+* Safer
 * Auditable
-* Aligns with assignment requirements
+* Gives users control
 
 Cons:
 
-* Additional UI complexity
+* Additional review step
 
 Chosen.
 
-## Final Decision
-
-Potentially destructive actions require user review before import execution.
-
 ---
-
-# Decision 5: Multi-Currency Support
-
-## Problem
-
-The assignment scenario contains expenses recorded in USD while balances are expected in INR.
-
-## Options Considered
-
-### Option A: Treat All Currencies Equally
-
-Pros:
-
-* Simple
-
-Cons:
-
-* Produces incorrect balances
-
-Rejected.
-
-### Option B: Use Live Exchange Rates
-
-Pros:
-
-* Current conversion values
-
-Cons:
-
-* Historical balances change over time
-* Difficult to audit
-
-Rejected.
-
-### Option C: Store Historical Exchange Rates
-
-Pros:
-
-* Reproducible balances
-* Auditable calculations
-
-Cons:
-
-* Requires exchange-rate management
-
-Chosen.
 
 ## Final Decision
 
-Each foreign-currency expense stores:
+Potential duplicates are surfaced to the user and require an explicit review decision.
 
-* Original amount
-* Original currency
-* Exchange rate
-* Converted group-currency value
+Available actions:
 
-Balances are calculated using stored historical rates.
-
----
-
-# Decision 6: Auditability
-
-## Problem
-
-Financial records should remain explainable even after edits or deletions.
-
-## Options Considered
-
-### Option A: Hard Delete Records
-
-Pros:
-
-* Simpler database
-
-Cons:
-
-* Loses history
-* Weak auditability
-
-Rejected.
-
-### Option B: Maintain Historical Records
-
-Pros:
-
-* Preserves traceability
-* Supports audits
-* Simplifies debugging
-
-Chosen.
-
-## Final Decision
-
-Expenses use soft deletion and important actions are recorded through audit logs and history tables.
+* Merge
+* Keep Both
+* Ignore
 
 ---
 
-# Decision 7: Authentication Strategy
+# Decision 6: Audit Logging
 
 ## Problem
 
-The application requires both traditional and social login.
+Financial systems require accountability and traceability.
 
 ## Options Considered
 
-### Option A: Email/Password Only
+### Option A: No Audit Logs
 
 Pros:
 
@@ -324,50 +289,214 @@ Pros:
 
 Cons:
 
-* Reduced usability
+* Difficult troubleshooting
+* Poor traceability
 
 Rejected.
 
-### Option B: Email/Password + Google OAuth
+---
+
+### Option B: Audit Log System
 
 Pros:
 
-* Better user experience
-* Common production pattern
+* Better transparency
+* Easier debugging
+* Tracks important actions
 
 Cons:
 
-* Additional integration complexity
+* Additional storage requirements
 
 Chosen.
 
+---
+
 ## Final Decision
 
-Implemented JWT-based authentication with support for email/password login and Google OAuth integration.
+Audit logs are generated for:
+
+* Expense actions
+* Settlement actions
+* Import actions
+* Review decisions
 
 ---
 
-# Decision 8: Relational Database Selection
+# Decision 7: Authentication Strategy
 
 ## Problem
 
-The assignment explicitly requires a relational database.
+The application requires secure API access.
 
 ## Options Considered
 
-### Option A: NoSQL Database
+### Option A: Session Authentication
 
-Rejected because the assignment explicitly requires relational storage.
+Pros:
+
+* Traditional Django approach
+
+Cons:
+
+* Less suitable for separate frontend applications
+
+Rejected.
+
+---
+
+### Option B: JWT Authentication
+
+Pros:
+
+* Stateless
+* API-friendly
+* Works well with Next.js frontend
+
+Cons:
+
+* Token management required
+
+Chosen.
+
+---
+
+## Final Decision
+
+JWT authentication was implemented using Django REST Framework and SimpleJWT.
+
+---
+
+# Decision 8: Database Selection
+
+## Problem
+
+The assignment requires a relational database.
+
+## Options Considered
+
+### Option A: SQLite
+
+Pros:
+
+* Simple local development
+
+Cons:
+
+* Not ideal for production deployment
+
+Rejected.
+
+---
 
 ### Option B: PostgreSQL
 
-Chosen because it provides:
+Pros:
 
-* Strong relational modeling
-* ACID transactions
-* Referential integrity
-* Mature ecosystem
+* Strong relational support
+* Reliable transactions
+* Production-ready
+* Excellent Django support
+
+Cons:
+
+* Additional deployment configuration
+
+Chosen.
+
+---
 
 ## Final Decision
 
 PostgreSQL was selected as the primary database.
+
+---
+
+# Decision 9: Frontend Architecture
+
+## Problem
+
+The application requires a responsive user interface with strong developer experience.
+
+## Options Considered
+
+### Option A: Traditional Django Templates
+
+Pros:
+
+* Simple deployment
+
+Cons:
+
+* Limited frontend flexibility
+
+Rejected.
+
+---
+
+### Option B: Next.js Frontend
+
+Pros:
+
+* Modern React ecosystem
+* Strong TypeScript support
+* Better UI development experience
+
+Cons:
+
+* Separate frontend deployment
+
+Chosen.
+
+---
+
+## Final Decision
+
+Next.js and TypeScript were used for the frontend application.
+
+---
+
+# Decision 10: API Design
+
+## Problem
+
+Frontend and backend must communicate consistently.
+
+## Options Considered
+
+### Option A: Server-rendered Pages Only
+
+Rejected.
+
+---
+
+### Option B: REST API
+
+Pros:
+
+* Clear separation of concerns
+* Easy frontend integration
+* Easy future expansion
+
+Chosen.
+
+---
+
+## Final Decision
+
+The backend exposes RESTful APIs through Django REST Framework.
+
+---
+
+# Summary
+
+The system prioritizes:
+
+* Transparency
+* Auditability
+* Data integrity
+* User-controlled imports
+* Maintainable architecture
+* Production-ready deployment
+
+All major design decisions were made with correctness, explainability, and extensibility in mind.

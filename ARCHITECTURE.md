@@ -1,18 +1,25 @@
 # ARCHITECTURE.md
 
-# System Overview
+# System Architecture
 
-The Shared Expenses Application is designed as a modern client-server web application with a clear separation between presentation, business logic, and data persistence.
+The Shared Expenses Application is a full-stack web application built using a modern client-server architecture.
 
-The architecture prioritizes:
+The system separates:
 
-* Auditability
-* Explainability
-* Maintainability
-* Extensibility
-* Deterministic financial calculations
+* User Interface
+* Business Logic
+* Data Persistence
 
-The system is designed around the assignment's core challenge of handling imperfect financial data while preserving transparency.
+This separation improves maintainability, testability, and scalability.
+
+The application was designed to support:
+
+* Shared expense tracking
+* Group management
+* Settlement recording
+* CSV import workflows
+* Anomaly review
+* Audit logging
 
 ---
 
@@ -29,7 +36,7 @@ flowchart LR
 
     DB["PostgreSQL Database"]
 
-    Swagger["Swagger/OpenAPI"]
+    Swagger["Swagger Documentation"]
 
     User --> Frontend
 
@@ -42,19 +49,26 @@ flowchart LR
 
 ---
 
-# Technology Choices
+# Technology Stack
 
 ## Frontend
 
 ### Next.js
 
-Chosen because it provides:
+Responsibilities:
 
-* Modern React architecture
+* User Interface
 * Routing
+* Form Handling
+* API Communication
+* Import Review Screens
+
+Benefits:
+
+* React-based architecture
 * TypeScript support
-* Strong developer experience
-* Easy deployment on Vercel
+* Easy deployment
+* Fast development workflow
 
 ---
 
@@ -62,13 +76,20 @@ Chosen because it provides:
 
 ### Django + Django REST Framework
 
-Chosen because it provides:
+Responsibilities:
 
-* Mature ORM
-* Strong validation support
-* Rapid API development
-* Authentication support
-* Excellent PostgreSQL integration
+* Authentication
+* Business Logic
+* Validation
+* Data Access
+* REST API Endpoints
+
+Benefits:
+
+* Mature ecosystem
+* Strong ORM support
+* Built-in security features
+* Fast API development
 
 ---
 
@@ -76,50 +97,54 @@ Chosen because it provides:
 
 ### PostgreSQL
 
-Chosen because:
+Responsibilities:
 
-* Assignment requires a relational database
-* Strong transaction guarantees
-* Referential integrity
-* Mature ecosystem
-* Excellent support for financial systems
+* Persistent Data Storage
+* Transaction Management
+* Relationship Management
+
+Benefits:
+
+* ACID compliance
+* Strong relational modeling
+* Reliable transaction support
 
 ---
 
 # Layered Architecture
 
-The backend follows a layered structure.
-
 ```text
-Presentation Layer
-       ↓
-API Layer
-       ↓
-Service Layer
-       ↓
-Data Layer
+Frontend Layer
+      ↓
+REST API Layer
+      ↓
+Business Logic Layer
+      ↓
+Database Layer
 ```
 
 ---
 
-## Presentation Layer
+# Frontend Layer
 
 Implemented using:
 
 * Next.js
 * React
-* Tailwind CSS
+* TypeScript
 
 Responsibilities:
 
-* User interface
-* Forms
-* Dashboard rendering
-* Import review workflow
+* Authentication screens
+* Dashboard pages
+* Group management UI
+* Expense management UI
+* Settlement management UI
+* Import workflow UI
 
 ---
 
-## API Layer
+# API Layer
 
 Implemented using:
 
@@ -130,51 +155,52 @@ Responsibilities:
 * Request validation
 * Authentication
 * Serialization
-* Response formatting
+* Response generation
 
 ---
 
-## Service Layer
+# Business Logic Layer
 
 Responsibilities:
 
-* Balance calculation
-* Debt simplification
+* Expense processing
+* Settlement processing
+* Group management
 * Import processing
 * Anomaly detection
-* Membership validation
+* Audit tracking
 
-This layer contains the primary business rules.
+Business rules are implemented here before data reaches the database.
 
 ---
 
-## Data Layer
+# Database Layer
 
 Implemented using:
 
-* Django ORM
 * PostgreSQL
+* Django ORM
 
 Responsibilities:
 
-* Persistence
-* Transactions
+* Data persistence
 * Query execution
+* Transaction safety
+* Relationship management
 
 ---
 
-# Backend Module Architecture
+# Backend Modules
 
 ## Accounts Module
 
 Responsibilities:
 
 * User registration
-* Login
-* JWT issuance
-* Google authentication support
+* User login
+* JWT authentication
 
-Primary entities:
+Primary Entity:
 
 * User
 
@@ -185,15 +211,13 @@ Primary entities:
 Responsibilities:
 
 * Group creation
-* Group management
-* Currency management
-* Membership history
+* Group updates
+* Group membership management
 
-Primary entities:
+Primary Entities:
 
 * Group
 * GroupMembership
-* Currency
 
 ---
 
@@ -201,16 +225,14 @@ Primary entities:
 
 Responsibilities:
 
-* Expense management
-* Split calculations
-* Expense history
-* Balance generation
+* Expense creation
+* Expense updates
+* Expense deletion
+* Balance calculations
 
-Primary entities:
+Primary Entity:
 
 * Expense
-* ExpenseParticipant
-* ExpenseHistory
 
 ---
 
@@ -218,10 +240,10 @@ Primary entities:
 
 Responsibilities:
 
-* Payment recording
-* Debt reduction
+* Settlement recording
+* Settlement tracking
 
-Primary entities:
+Primary Entity:
 
 * Settlement
 
@@ -235,10 +257,10 @@ Responsibilities:
 * CSV parsing
 * Validation
 * Anomaly detection
-* Import execution
-* Import reports
+* Review workflow
+* Import reporting
 
-Primary entities:
+Primary Entities:
 
 * ImportSession
 * ImportAnomaly
@@ -249,10 +271,10 @@ Primary entities:
 
 Responsibilities:
 
-* Audit logging
 * Activity tracking
+* Change logging
 
-Primary entities:
+Primary Entity:
 
 * AuditLog
 
@@ -262,9 +284,8 @@ Primary entities:
 
 Responsibilities:
 
-* Summary reporting
-* Category reporting
-* Spending insights
+* Summary generation
+* Reporting endpoints
 
 ---
 
@@ -273,45 +294,26 @@ Responsibilities:
 ```mermaid
 sequenceDiagram
 
-User->>Frontend: Login Request
+User->>Frontend: Login
 
 Frontend->>API: Credentials
 
-API->>Database: Validate User
+API->>Database: Verify User
 
-Database-->>API: User
+Database-->>API: User Data
 
-API-->>Frontend: JWT Token
+API-->>Frontend: JWT Tokens
 
 Frontend-->>User: Authenticated Session
 ```
 
-Authentication uses JWT tokens for stateless API access.
+Authentication uses JWT tokens.
 
----
+Protected API requests include:
 
-# Membership Timeline Architecture
-
-A major assignment requirement is support for changing group membership.
-
-Each membership record contains:
-
-* joined_at
-* left_at
-
-Example:
-
-```text
-Meera
-Joined: February 1
-Left: March 31
-
-Sam
-Joined: April 15
-Left: NULL
+```http
+Authorization: Bearer <token>
 ```
-
-This design allows historical calculations to remain accurate.
 
 ---
 
@@ -320,80 +322,52 @@ This design allows historical calculations to remain accurate.
 ```mermaid
 flowchart TD
 
-Expense["Expense Created"]
+Expense["Create Expense"]
 
-Validate["Validate Membership"]
+Validate["Validate Request"]
 
-Split["Calculate Splits"]
+Store["Save Expense"]
 
-Store["Persist Expense"]
-
-Audit["Create Audit Log"]
+Audit["Create Audit Record"]
 
 Expense --> Validate
 
-Validate --> Split
-
-Split --> Store
+Validate --> Store
 
 Store --> Audit
 ```
 
-Before an expense is stored:
+Expense requests are validated before persistence.
 
-1. Membership is validated.
-2. Split values are validated.
-3. Currency information is validated.
-4. Audit records are created.
+Audit records are created for important actions.
 
 ---
 
-# Balance Calculation Architecture
+# Settlement Processing Flow
 
-Balances are not stored as mutable totals.
+```mermaid
+flowchart TD
 
-Instead, they are derived from source transactions.
+Settlement["Create Settlement"]
 
-Calculation inputs:
+Validate["Validate Request"]
 
-* Expenses
-* Expense participants
-* Settlements
-* Membership timelines
-* Currency conversion rules
+Store["Save Settlement"]
 
-Calculation outputs:
+Audit["Create Audit Record"]
 
-* Net balances
-* Debt simplification
-* Trace records
+Settlement --> Validate
 
-This approach improves:
+Validate --> Store
 
-* Auditability
-* Explainability
-* Data integrity
+Store --> Audit
+```
 
 ---
 
-# Currency Handling
+# Import Processing Architecture
 
-The application supports multiple currencies.
-
-Each expense stores:
-
-* Original amount
-* Original currency
-* Exchange rate
-* Converted amount
-
-Balances are calculated using the group currency while preserving source values for auditing.
-
----
-
-# Import Architecture
-
-The import system follows a review-first design.
+The CSV import workflow follows a review-first design.
 
 ```mermaid
 flowchart LR
@@ -413,79 +387,78 @@ Review --> Import
 Import --> Report
 ```
 
-The importer never silently changes data.
-
-Users must explicitly approve anomaly resolutions.
+This approach prevents potentially invalid data from being automatically inserted into the system.
 
 ---
 
-# Anomaly Detection Framework
+# Anomaly Detection
 
-The importer uses pluggable anomaly detectors.
+The import system detects issues before records are imported.
 
-Benefits:
+Examples:
 
-* Extensible
-* Testable
-* Independent rules
-* No hardcoded CSV assumptions
+* Duplicate Records
+* Missing Required Fields
+* Invalid Amounts
+* Invalid Dates
+* Membership Violations
+* Unknown References
 
-Supported anomaly categories include:
-
-* Duplicates
-* Membership violations
-* Invalid dates
-* Invalid amounts
-* Currency issues
-* Split inconsistencies
+Detected anomalies are surfaced for review.
 
 ---
 
 # Audit Architecture
 
-Every important financial action generates an audit record.
+Important actions create audit entries.
 
 Examples:
 
+* Group creation
 * Expense creation
-* Expense update
-* Expense deletion
+* Expense updates
 * Settlement creation
 * Import execution
-* Duplicate resolution
+* Import review actions
 
-Audit logs provide a complete historical record of system activity.
-
----
-
-# Scalability Considerations
-
-The architecture supports future expansion through:
-
-* Additional split types
-* Additional currencies
-* New anomaly detectors
-* Additional reporting modules
-* Alternative authentication providers
-
-The modular backend design minimizes coupling between business domains.
+Audit records improve traceability and debugging.
 
 ---
 
-# Design Philosophy
+# Deployment Architecture
 
-The system was designed around three principles:
+Frontend:
 
-### Transparency
+* Vercel
 
-Every financial calculation should be explainable.
+Backend:
 
-### Auditability
+* Render
 
-Every significant action should be traceable.
+Database:
 
-### Data Integrity
+* PostgreSQL
 
-Invalid or suspicious data should be surfaced rather than silently modified.
+CI/CD:
 
-These principles guided all major engineering decisions throughout the project.
+* GitHub Actions
+
+---
+
+# Design Principles
+
+The architecture follows three principles:
+
+## Transparency
+
+System actions should be visible and understandable.
+
+## Auditability
+
+Important changes should be traceable.
+
+## Data Integrity
+
+Validation should occur before data is persisted.
+
+These principles guided the overall system design and implementation.

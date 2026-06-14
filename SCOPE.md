@@ -1,46 +1,91 @@
-# CSV Availability and Anomaly Analysis
+# SCOPE.md
 
-## CSV Availability Status
+# Project Scope
 
-The assignment references an official `expenses_export.csv` containing deliberately introduced data-quality issues.
+This document describes the scope of the Shared Expenses Application, the implemented data model, anomaly detection behavior, and CSV import handling.
 
-At the time of implementation, the official CSV file was not available in the provided workspace. Because the file contents were unavailable, no attempt was made to infer, fabricate, or hardcode CSV-specific anomalies.
+---
 
-Instead, the application was designed around a generic anomaly-detection and review framework capable of analyzing unknown datasets at import time.
+# Assignment Objective
 
-## Expected Anomaly Log Deliverable
+The goal of this project is to provide a production-ready shared expense management platform capable of:
 
-The assignment requires a row-by-row anomaly log documenting:
+* Managing groups and memberships
+* Recording shared expenses
+* Calculating balances transparently
+* Recording settlements
+* Importing historical expense data
+* Detecting data-quality issues
+* Providing auditability for financial records
 
-* The anomaly detected
-* The affected row(s)
-* The action taken
-* The final import outcome
+---
 
-Because the official CSV was unavailable, a CSV-specific anomaly log could not be produced truthfully.
+# CSV Import Analysis
 
-The application instead generates this report automatically whenever a CSV is imported.
+The application includes a CSV import workflow designed to ingest expense data, validate records, detect anomalies, and generate review reports before final import.
 
-## Implemented Anomaly Detection Policies
+Import Workflow:
 
-The importer currently detects, surfaces, and records the following anomaly classes:
+Upload CSV
 
-### Duplicate Expenses
+↓
 
-Detection:
+Parse Records
 
-* Matching payer
-* Matching amount
-* Matching transaction date
-* Matching description
-* Matching group
+↓
 
-Handling:
+Normalize Data
+
+↓
+
+Validate Data
+
+↓
+
+Detect Anomalies
+
+↓
+
+Review Required Issues
+
+↓
+
+Import Approved Records
+
+↓
+
+Generate Import Report
+
+---
+
+# Implemented Anomaly Detection
+
+The importer currently detects the following anomaly categories.
+
+## Duplicate Expenses
+
+Detection Criteria:
+
+* Same payer
+* Same amount
+* Same transaction date
+* Same description
+* Same group
+
+Action:
 
 * User review required
-* User may merge, keep both, or ignore
+* Merge
+* Keep Both
+* Ignore
 
-### Missing Required Fields
+Severity:
+
+Warning
+
+---
+
+## Missing Required Fields
 
 Detection:
 
@@ -49,134 +94,372 @@ Detection:
 * Missing date
 * Missing group
 
-Handling:
+Action:
 
-* Blocking error
-* Row skipped until corrected
+* Row blocked from import
 
-### Missing Participants
+Severity:
 
-Detection:
+Error
 
-* Expense contains no valid split participants
+---
 
-Handling:
-
-* Blocking error
-
-### Invalid Dates
+## Missing Participants
 
 Detection:
 
-* Unsupported or malformed date formats
+* Expense contains no valid participants
 
-Handling:
+Action:
 
-* Blocking error
+* Row blocked from import
 
-### Future-Dated Transactions
+Severity:
 
-Detection:
+Error
 
-* Transaction date greater than import date
+---
 
-Handling:
-
-* Warning requiring review
-
-### Invalid Amounts
+## Invalid Dates
 
 Detection:
 
-* Non-numeric or malformed monetary values
+* Invalid date format
+* Unparseable date values
 
-Handling:
+Action:
 
-* Blocking error
+* Row blocked from import
 
-### Negative Values
+Severity:
 
-Detection:
+Error
 
-* Expense amount below zero
+---
 
-Handling:
-
-* Warning
-* Treated as potential refund or adjustment
-
-### Unknown Users
+## Future Transactions
 
 Detection:
 
-* User referenced in CSV does not exist
+* Transaction date is later than import date
 
-Handling:
+Action:
 
-* Blocking error until mapped or created
+* User review required
 
-### Unknown Groups
+Severity:
 
-Detection:
+Warning
 
-* Group referenced in CSV does not exist
+---
 
-Handling:
-
-* Blocking error until mapped or created
-
-### Membership Violations
+## Invalid Amounts
 
 Detection:
 
-* User was not an active group member on the transaction date
+* Non-numeric values
+* Malformed currency amounts
 
-Handling:
+Action:
 
-* Blocking error
+* Row blocked from import
 
-### Currency Mismatches
+Severity:
 
-Detection:
+Error
 
-* Currency code differs from group currency
+---
 
-Handling:
-
-* Warning requiring exchange-rate validation
-
-### Missing Exchange Rates
+## Negative Amounts
 
 Detection:
 
-* Foreign-currency expense without exchange-rate information
+* Expense amount less than zero
 
-Handling:
+Action:
 
-* Blocking error
+* Flagged for review
 
-### Invalid Split Totals
+Severity:
 
-Detection:
+Warning
 
-* Participant shares do not equal expense amount
+---
 
-Handling:
-
-* Blocking error
-
-### Settlement Recorded as Expense
+## Unknown Users
 
 Detection:
 
-* Expense appears to represent debt repayment rather than spending
+* Referenced user does not exist
 
-Handling:
+Action:
 
-* Warning requiring user review
+* Row blocked until user is mapped or created
 
-## Design Decision
+Severity:
 
-The system intentionally avoids making assumptions about unseen CSV data.
+Error
 
-When the official CSV becomes available, the importer can generate a complete anomaly report without requiring application code changes.
+---
+
+## Unknown Groups
+
+Detection:
+
+* Referenced group does not exist
+
+Action:
+
+* Row blocked until group is mapped
+
+Severity:
+
+Error
+
+---
+
+## Membership Violations
+
+Detection:
+
+* User was not an active member when transaction occurred
+
+Action:
+
+* Row blocked from import
+
+Severity:
+
+Error
+
+---
+
+## Invalid Split Totals
+
+Detection:
+
+* Participant allocations do not equal expense amount
+
+Action:
+
+* Row blocked from import
+
+Severity:
+
+Error
+
+---
+
+# Import Review Actions
+
+For reviewable anomalies the user may choose:
+
+## Merge
+
+Combine imported data with an existing record.
+
+## Keep Both
+
+Preserve both records.
+
+## Ignore
+
+Skip importing the flagged row.
+
+All review decisions are recorded in the audit log.
+
+---
+
+# Database Schema
+
+## User
+
+Stores application users.
+
+Fields:
+
+* id
+* email
+* password
+* first_name
+* last_name
+
+---
+
+## Group
+
+Stores expense groups.
+
+Fields:
+
+* id
+* name
+* created_at
+
+---
+
+## Membership
+
+Tracks group membership history.
+
+Fields:
+
+* id
+* group_id
+* user_id
+* joined_at
+* left_at
+
+---
+
+## Expense
+
+Stores expenses.
+
+Fields:
+
+* id
+* description
+* amount
+* paid_by
+* group_id
+* created_at
+
+---
+
+## ExpenseParticipant
+
+Stores participant shares.
+
+Fields:
+
+* id
+* expense_id
+* user_id
+* share_amount
+
+---
+
+## Settlement
+
+Stores repayments between users.
+
+Fields:
+
+* id
+* payer
+* receiver
+* amount
+* created_at
+
+---
+
+## ImportSession
+
+Stores CSV import metadata.
+
+Fields:
+
+* id
+* uploaded_by
+* original_filename
+* status
+* report
+* created_at
+
+---
+
+## ImportAnomaly
+
+Stores detected anomalies.
+
+Fields:
+
+* id
+* import_session_id
+* row_number
+* code
+* severity
+* message
+
+---
+
+## AuditLog
+
+Stores system activity.
+
+Fields:
+
+* id
+* actor
+* action
+* target_type
+* target_id
+* before_state
+* after_state
+* created_at
+
+---
+
+# Auditability
+
+The system records:
+
+* Expense creation
+* Expense updates
+* Expense deletion
+* Settlement activity
+* Import activity
+* Duplicate review decisions
+
+This ensures every important financial action remains traceable and explainable.
+
+---
+
+# Scope Boundaries
+
+Implemented:
+
+✅ Authentication
+
+✅ Group Management
+
+✅ Expense Tracking
+
+✅ Settlement Tracking
+
+✅ Balance Calculation
+
+✅ CSV Import
+
+✅ Anomaly Detection
+
+✅ Audit Logging
+
+✅ Import Reporting
+
+Not Included:
+
+* Real-time notifications
+* Mobile application
+* Offline synchronization
+* Bank integrations
+* External payment gateways
+
+---
+
+# Deliverable Summary
+
+The application provides:
+
+* Shared expense management
+* Historical membership tracking
+* Settlement management
+* CSV import and review workflow
+* Anomaly detection
+* Import reporting
+* Audit logging
+* REST API backend
+* Next.js frontend
+* PostgreSQL persistence
+* Docker deployment support

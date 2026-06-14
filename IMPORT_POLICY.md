@@ -1,358 +1,191 @@
+# IMPORT_POLICY.md
+
 # Import Policy
 
 ## Purpose
 
-The import system is designed to ingest imperfect financial data while maintaining transparency, auditability, and user control.
+The CSV import system is designed to allow users to upload expense data, review detected issues, and import records in a controlled and auditable manner.
 
-The application never silently modifies imported data.
-
-Every detected anomaly is surfaced to the user and recorded as part of the import session.
+The system follows a review-first approach and records all import activity for future reference.
 
 ---
 
 # Import Workflow
 
-Every CSV import follows the same pipeline:
+Every import follows the same process:
 
-1. Upload CSV
-2. Parse Rows
-3. Normalize Data
-4. Validate Records
-5. Detect Anomalies
-6. Present Review Screen
-7. Collect User Decisions
-8. Import Approved Records
-9. Generate Import Report
-10. Create Audit Records
+```text
+Upload CSV
+   ↓
+Parse File
+   ↓
+Validate Data
+   ↓
+Detect Anomalies
+   ↓
+Review Results
+   ↓
+Apply Review Actions
+   ↓
+Generate Import Report
+```
 
 ---
 
 # Import Principles
 
-The importer follows the following rules:
+## Transparency
 
-### No Silent Data Modification
+Detected issues are surfaced to the user instead of being silently ignored.
 
-Imported data is never automatically changed without user visibility.
+## Review Before Import
 
-### User Approval For Destructive Actions
+Potentially problematic records require review before actions are applied.
 
-Potentially destructive actions require explicit user review.
+## Auditability
 
-### Auditability
+Import activity and review decisions are recorded and remain traceable.
 
-All anomaly decisions are stored and traceable.
+## Deterministic Processing
 
-### Deterministic Imports
-
-The same input and review decisions should produce the same output.
-
-### No CSV-Specific Assumptions
-
-The importer does not contain hardcoded logic based on unseen datasets.
+The same file and review decisions should produce the same import result.
 
 ---
 
-# Anomaly Handling Policies
+# Supported Import Features
 
-## Duplicate Expenses
+The importer currently supports:
 
-### Detection
-
-Potential duplicates are identified using:
-
-* Transaction Date
-* Amount
-* Payer
-* Description
-* Group
-
-### Severity
-
-Warning
-
-### User Options
-
-* Merge
-* Keep Both
-* Ignore
-
-### Policy
-
-No duplicate is automatically removed.
-
-User review is required before import.
+* CSV file uploads
+* Import sessions
+* Import reports
+* Anomaly tracking
+* Review actions
+* Audit logging
 
 ---
 
-## Missing Required Fields
+# Anomaly Detection
 
-### Detection
+The importer validates uploaded records and records detected anomalies.
 
-Missing:
+Examples of anomalies that may be detected include:
 
-* Amount
-* Date
-* Payer
-* Group
+## Duplicate Records
 
-### Severity
+Potential duplicate expenses based on imported data.
 
-Blocking Error
+Available actions:
 
-### Policy
+* merge
+* keep_both
+* ignore
 
-Row cannot be imported until corrected.
-
----
-
-## Missing Participants
-
-### Detection
-
-Expense contains no valid participants.
-
-### Severity
-
-Blocking Error
-
-### Policy
-
-Expense is skipped until valid participants are provided.
+Duplicates are not automatically removed.
 
 ---
 
-## Invalid Dates
-
-### Detection
-
-Malformed or unsupported date values.
-
-### Severity
-
-Blocking Error
-
-### Policy
-
-Row cannot be imported.
-
----
-
-## Future-Dated Transactions
-
-### Detection
-
-Transaction date occurs after import date.
-
-### Severity
-
-Warning
-
-### Policy
-
-User review required before import.
-
----
-
-## Invalid Amounts
-
-### Detection
-
-Non-numeric or malformed monetary values.
-
-### Severity
-
-Blocking Error
-
-### Policy
-
-Row cannot be imported.
-
----
-
-## Negative Amounts
-
-### Detection
-
-Amount is less than zero.
-
-### Severity
-
-Warning
-
-### Policy
-
-Negative values are treated as potential refunds, reversals, or adjustments.
-
-User review is required before import.
-
----
-
-## Unknown Users
-
-### Detection
-
-Referenced user does not exist.
-
-### Severity
-
-Blocking Error
-
-### Policy
-
-User must be mapped or created before import.
-
----
-
-## Unknown Groups
-
-### Detection
-
-Referenced group does not exist.
-
-### Severity
-
-Blocking Error
-
-### Policy
-
-Group must be mapped or created before import.
-
----
-
-## Membership Violations
-
-### Detection
-
-A user participates in a transaction outside their membership period.
+## Missing Required Data
 
 Examples:
 
-* Sam included before joining.
-* Meera included after leaving.
+* Missing amount
+* Missing payer
+* Missing date
+* Missing group information
 
-### Severity
-
-Blocking Error
-
-### Policy
-
-Row cannot be imported.
-
-Membership timelines are treated as authoritative.
+Such records are flagged for review.
 
 ---
 
-## Currency Mismatches
+## Invalid Values
 
-### Detection
+Examples:
 
-Expense currency differs from group currency.
+* Invalid dates
+* Invalid amounts
+* Malformed records
 
-### Severity
-
-Warning
-
-### Policy
-
-Exchange-rate validation required.
+Such records are reported as anomalies.
 
 ---
 
-## Missing Exchange Rates
+## Data Consistency Issues
 
-### Detection
-
-Foreign-currency expense without exchange-rate information.
-
-### Severity
-
-Blocking Error
-
-### Policy
-
-Expense cannot be imported until an exchange rate is provided.
+Records that do not satisfy validation rules are surfaced for review before import processing continues.
 
 ---
 
-## Invalid Split Totals
+# Review Actions
 
-### Detection
+When anomalies are detected, users may choose one of the following actions:
 
-Participant allocations do not equal expense amount.
+## Merge
 
-### Severity
-
-Blocking Error
-
-### Policy
-
-Expense cannot be imported.
+Merge the imported record with an existing matching record.
 
 ---
 
-## Settlement Recorded As Expense
+## Keep Both
 
-### Detection
-
-Transaction appears to represent debt repayment rather than spending.
-
-### Severity
-
-Warning
-
-### Policy
-
-User reviews whether the row should:
-
-* Remain an expense
-* Be skipped
-* Be recorded as a settlement
+Retain both records.
 
 ---
 
-# Import Report Policy
+## Ignore
 
-Each import session generates a permanent report containing:
+Ignore the detected anomaly during review.
 
-* Import Session ID
+---
+
+# Import Report
+
+Each import session generates a report containing:
+
+* Import Session Identifier
 * Source Filename
-* Import Timestamp
-* Import Duration
-* Rows Processed
-* Rows Imported
-* Rows Skipped
-* Anomalies Detected
-* User Actions Taken
-* Imported Expense IDs
+* Import Status
+* Detected Anomalies
+* Review Decisions
+* Processing Results
 
-The report is stored with the import session and remains available for audit purposes.
+The report remains attached to the import session for auditing purposes.
 
 ---
 
-# Audit Logging Policy
+# Audit Logging
 
-The following actions are recorded:
+Import-related actions generate audit records.
 
-* Import Started
+Examples include:
+
+* Import Created
+* Import Processed
+* Anomaly Reviewed
 * Import Completed
-* Import Failed
-* Anomaly Detected
-* Duplicate Resolution
-* User Review Decisions
-* Expense Creation
-* Settlement Creation
 
 ---
 
-# Official CSV Availability
+# Design Philosophy
 
-The assignment references an official file named:
+The import system follows three principles:
 
-`expenses_export.csv`
+## Transparency
 
-During implementation, the referenced file was not present in the working repository.
+Users should understand what was detected during import.
 
-To avoid unsupported assumptions, no dataset-specific anomaly rules were created.
+## User Control
 
-The importer was intentionally designed as a generic framework capable of processing the official dataset once it becomes available, without requiring application code changes.
+Potentially sensitive actions require user review.
+
+## Traceability
+
+Import decisions should remain available for future inspection.
+
+---
+
+# Notes
+
+The importer was designed as a reusable framework rather than a dataset-specific solution.
+
+Validation, anomaly detection, review actions, and reporting are handled through the import workflow, allowing different CSV datasets to be processed through the same review pipeline.

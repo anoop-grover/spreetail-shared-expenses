@@ -1,14 +1,27 @@
 # AI_USAGE.md
 
-## AI Tools Used
+# AI Usage Disclosure
+
+This document describes how AI-assisted tools were used during development of the Shared Expenses Application, the prompts used, mistakes identified in generated output, and the corrections made before accepting the code.
+
+---
+
+# AI Tools Used
 
 Primary AI Tool:
 
-* OpenAI Codex
+* OpenAI Codex / ChatGPT
 
-AI was used as a development collaborator for code generation, and implementation review.
+AI was used as a development assistant for:
 
-All generated code was manually reviewed before acceptance.
+* Project scaffolding
+* Code generation
+* UI generation
+* Documentation drafting
+* Debugging assistance
+* Architecture discussions
+
+All generated output was manually reviewed, tested, and modified before being accepted into the project.
 
 ---
 
@@ -16,213 +29,229 @@ All generated code was manually reviewed before acceptance.
 
 ## Prompt 1
 
-Build a production-ready Splitwise-like shared expenses application using:
+Build a Splitwise-like shared expenses application using:
 
-* Django + DRF
+* Django
+* Django REST Framework
 * Next.js
 * PostgreSQL
-* Docker
 * JWT Authentication
-* Google OAuth
-* CSV Import Framework
-* Audit Logs
-* Group Membership History
-* Multi-Currency Support
+* Docker
+* CSV Import Workflow
+* Audit Logging
 
-Generate a complete repository with deployment configuration, and tests.
+Generate a complete project structure including backend APIs, frontend pages, database models, and deployment configuration.
 
 ---
 
 ## Prompt 2
 
-Cross-check the implementation against the assignment requirements and identify missing functionality, architectural weaknesses, or documentation gaps.
+Review the implementation against the assignment requirements and identify:
+
+* Missing functionality
+* Architectural weaknesses
+* Data consistency issues
+* Documentation gaps
 
 ---
 
 ## Prompt 3
 
-Design a generic CSV import system that can detect, surface, review, and resolve anomalies without assuming the structure of an unavailable CSV file.
+Design a CSV import workflow capable of:
+
+* Parsing uploaded files
+* Detecting anomalies
+* Supporting review actions
+* Generating import reports
+
+without making assumptions about future datasets.
 
 ---
 
 # AI Mistakes Identified and Corrected
 
-The assignment specifically requires that AI-generated output be reviewed rather than accepted blindly.
-
-The following issues were identified during manual review.
+The assignment requires manual review of AI-generated output. The following issues were identified and corrected.
 
 ---
 
-## Case 1: Import Pipeline Did Not Create Expenses
+## Case 1: Incorrect Import Workflow Assumption
 
 ### AI Output
 
-The initial CSV import implementation successfully:
-
-* Parsed CSV files
-* Detected anomalies
-* Generated reports
-
-However, approved rows were never converted into actual application records.
+AI initially suggested that CSV upload should directly create records immediately after parsing.
 
 ### Problem
 
-The import workflow appeared complete but did not create:
+This bypassed the review workflow required by the assignment.
 
-* Expense records
-* Expense participant records
-
-As a result, imported data would never affect balances.
+Potential duplicate or invalid records could enter the database without user approval.
 
 ### Detection Method
 
-Manual code review of:
-
-```text
-CsvImportService.apply_review_actions
-```
-
-revealed that review actions only updated anomaly status.
+Requirement review and manual testing of the import process.
 
 ### Correction
 
-The importer was modified so approved rows create:
+A review stage was retained between parsing and final import.
 
-* Expense
-* ExpenseParticipant
+The workflow became:
 
-records during import execution.
+Upload
 
-### Validation
+↓
 
-Verified through import workflow testing and additional unit tests.
+Parse
+
+↓
+
+Validate
+
+↓
+
+Review
+
+↓
+
+Import
 
 ---
 
-## Case 2: Currency Conversion Was Missing
+## Case 2: Frontend Group Import Integration Error
 
 ### AI Output
 
-The first balance implementation treated all expense amounts as if they shared the same currency.
+AI-generated frontend code attempted to upload CSV files without properly handling group selection.
 
 ### Problem
 
-This violated one of the assignment's core business requirements:
+The backend expected a valid group identifier when importing data into a group.
 
-> Priya: "Half the trip was in dollars."
-
-Balances would be incorrect whenever multiple currencies existed.
+This caused import failures and invalid requests.
 
 ### Detection Method
 
-Manual review against assignment requirements.
+Runtime testing and API error inspection.
 
 ### Correction
 
 Added:
 
-* Currency entity
-* Exchange-rate support
-* `exchange_rate_to_group`
-* Conversion during balance calculation
-* Trace records showing source currency and rate
+* Group selection dropdown
+* Group ID submission through FormData
+* Validation before upload
 
 ### Validation
 
-Verified through balance calculation tests involving foreign-currency expenses.
+Verified through successful import requests after selecting a group.
 
 ---
 
-## Case 3: Documentation Claimed CSV Access Restrictions
+## Case 3: TypeScript State Typing Error
 
 ### AI Output
 
-Initial documentation stated that the official CSV was unavailable due to access restrictions.
+AI-generated code used:
+
+```typescript
+const [groups, setGroups] = useState([]);
+```
 
 ### Problem
 
-The assignment brief states that a CSV should exist.
+TypeScript inferred the array type as `never[]`.
 
-The actual issue was that the file was not present in the implementation workspace.
-
-The documentation therefore overstated the cause of the problem.
+This caused build failures during CI execution.
 
 ### Detection Method
 
-Comparison between:
-
-* Assignment brief
-* Actual workspace contents
+GitHub Actions build logs.
 
 ### Correction
 
-Documentation was updated to describe the precise implementation constraint:
+Introduced an explicit type:
 
-* CSV referenced by assignment
-* CSV not present in workspace during implementation
+```typescript
+type Group = {
+  id: number;
+  name: string;
+};
+
+const [groups, setGroups] = useState<Group[]>([]);
+```
 
 ### Validation
 
-All project documents were updated to remain factually accurate.
+Application built successfully after the correction.
 
 ---
 
-## Case 4: Duplicate Resolution Was Too Aggressive
+## Case 4: Documentation Contained Unsupported Assumptions
 
 ### AI Output
 
-The initial duplicate-expense workflow favored automatic cleanup.
+Some generated documentation described functionality that was not fully implemented.
 
 ### Problem
 
-The assignment explicitly includes the requirement:
+Documentation must accurately reflect the actual system.
 
-> "I want to approve anything the app deletes or changes."
-
-Automatic resolution could violate this requirement.
+Overstating implemented features creates risk during technical review.
 
 ### Detection Method
 
-Requirement review against implemented behavior.
+Manual comparison between:
+
+* Source code
+* Assignment requirements
+* Generated documentation
 
 ### Correction
 
-A review-and-approval workflow was enforced before potentially destructive actions.
+Documentation was revised to describe only functionality that exists in the codebase.
 
 ### Validation
 
-Duplicate handling now requires explicit user action before import execution.
+README, SCOPE, and DECISIONS documents were updated for consistency.
 
 ---
 
 # Human Responsibilities Retained
 
-The following activities remained the responsibility of the developer:
+The following responsibilities remained entirely manual:
 
-* Architecture review
-* Documentation Work
-* Requirement verification
-* Database design validation
-* Security review
-* Deployment configuration
-* Environment setup
-* Testing strategy
+* Requirement analysis
+* Architecture decisions
+* Database review
+* API review
+* UI review
+* Deployment setup
+* Environment configuration
+* Bug fixing
+* Testing
 * Documentation review
-* Assignment compliance review
+* Assignment compliance verification
 
-No AI-generated code was merged without manual inspection.
+No AI-generated output was accepted without inspection.
 
 ---
 
-# Remaining Manual Verification Before Submission
+# Verification Performed
 
-The following items require final human verification:
+The following validation activities were completed manually:
 
-* OAuth credentials
-* Deployment environment variables
-* Production database configuration
-* Public deployment URLs
-* End-to-end testing
-* Final import report generation if the official CSV becomes available
+* API testing
+* Authentication testing
+* Expense workflow testing
+* Settlement workflow testing
+* CSV import testing
+* Frontend build verification
+* Backend deployment verification
+* GitHub Actions verification
 
-The developer remains responsible for all submitted code and documentation.
+---
+
+# Responsibility Statement
+
+AI was used as a development assistant and productivity tool.
+
+Final responsibility for all submitted code, documentation, deployment configuration, testing, and assignment deliverables remains with the developer.

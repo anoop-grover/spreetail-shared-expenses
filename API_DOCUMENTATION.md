@@ -8,26 +8,17 @@ The API supports:
 
 * Authentication
 * Group Management
-* Membership History
 * Expense Management
 * Settlement Tracking
-* Balance Calculation
 * CSV Import Processing
-* Audit Logging
 * Reporting
 
-Interactive API documentation is available through Swagger and Redoc.
+Interactive API documentation is available through Swagger.
 
 Swagger UI:
 
 ```text
 /api/docs/
-```
-
-Redoc:
-
-```text
-/api/redoc/
 ```
 
 OpenAPI Schema:
@@ -40,11 +31,9 @@ OpenAPI Schema:
 
 # Authentication
 
-The API uses JWT-based authentication.
+The API uses JWT Authentication.
 
-After login, clients must include the access token in every protected request.
-
-Example:
+Protected endpoints require:
 
 ```http
 Authorization: Bearer <access_token>
@@ -60,7 +49,17 @@ Authorization: Bearer <access_token>
 POST /api/auth/register/
 ```
 
-Creates a new account.
+Creates a new user account.
+
+### Example Request
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "name": "John Doe"
+}
+```
 
 ---
 
@@ -70,49 +69,26 @@ Creates a new account.
 POST /api/auth/login/
 ```
 
-Returns JWT access and refresh tokens.
+Authenticates a user and returns JWT tokens.
+
+### Example Response
+
+```json
+{
+  "access": "jwt_access_token",
+  "refresh": "jwt_refresh_token"
+}
+```
 
 ---
 
-## Google Authentication
+## Refresh Token
 
 ```http
-POST /api/auth/google/
+POST /api/auth/refresh/
 ```
 
-Authenticates a user through Google OAuth.
-
----
-
-## Current User
-
-```http
-GET /api/users/me/
-```
-
-Returns the authenticated user's profile.
-
----
-
-# Currency Endpoints
-
-## List Currencies
-
-```http
-GET /api/currencies/
-```
-
-Returns supported currencies.
-
----
-
-## Create Currency
-
-```http
-POST /api/currencies/
-```
-
-Creates a new currency.
+Returns a new access token using a valid refresh token.
 
 ---
 
@@ -124,7 +100,7 @@ Creates a new currency.
 GET /api/groups/
 ```
 
-Returns groups visible to the authenticated user.
+Returns all groups available to the authenticated user.
 
 ---
 
@@ -136,89 +112,43 @@ POST /api/groups/
 
 Creates a new group.
 
----
-
-## Group Balances
-
-```http
-GET /api/groups/{group_id}/balances/
-```
-
-Returns detailed balances for a group.
-
-Example Response:
+### Example Request
 
 ```json
 {
-  "group_id": 1,
-  "balances": [
-    {
-      "user": "Aisha",
-      "net_balance": 1200.00
-    },
-    {
-      "user": "Rohan",
-      "net_balance": -1200.00
-    }
-  ]
+  "name": "Flatmates"
 }
 ```
 
 ---
 
-## Simplified Debts
+## Retrieve Group
 
 ```http
-GET /api/groups/{group_id}/simplified-debts/
+GET /api/groups/{id}/
 ```
 
-Returns debt simplification results.
-
-Example Response:
-
-```json
-{
-  "transactions": [
-    {
-      "from": "Rohan",
-      "to": "Aisha",
-      "amount": 1200
-    }
-  ]
-}
-```
+Returns group details.
 
 ---
 
-# Membership Endpoints
-
-## List Memberships
+## Update Group
 
 ```http
-GET /api/memberships/
+PUT /api/groups/{id}/
 ```
 
-Returns group membership history.
+Updates group information.
 
 ---
 
-## Create Membership
+## Delete Group
 
 ```http
-POST /api/memberships/
+DELETE /api/groups/{id}/
 ```
 
-Adds a member to a group.
-
-Example:
-
-```json
-{
-  "group": 1,
-  "user": 4,
-  "joined_at": "2025-04-15"
-}
-```
+Deletes a group.
 
 ---
 
@@ -230,7 +160,7 @@ Example:
 GET /api/expenses/
 ```
 
-Returns expenses visible to the authenticated user.
+Returns all visible expenses.
 
 ---
 
@@ -242,14 +172,13 @@ POST /api/expenses/
 
 Creates a new expense.
 
-Example:
+### Example Request
 
 ```json
 {
   "group": 1,
-  "payer": 2,
+  "payer": 1,
   "amount": 1000,
-  "currency": "INR",
   "description": "Groceries",
   "split_type": "equal"
 }
@@ -257,13 +186,33 @@ Example:
 
 ---
 
-## Expense History
+## Retrieve Expense
 
 ```http
-GET /api/expenses/{expense_id}/history/
+GET /api/expenses/{id}/
 ```
 
-Returns historical changes for an expense.
+Returns expense details.
+
+---
+
+## Update Expense
+
+```http
+PUT /api/expenses/{id}/
+```
+
+Updates an expense.
+
+---
+
+## Delete Expense
+
+```http
+DELETE /api/expenses/{id}/
+```
+
+Deletes an expense.
 
 ---
 
@@ -275,19 +224,19 @@ Returns historical changes for an expense.
 GET /api/settlements/
 ```
 
-Returns settlement history.
+Returns recorded settlements.
 
 ---
 
-## Record Settlement
+## Create Settlement
 
 ```http
 POST /api/settlements/
 ```
 
-Records a payment between members.
+Records a settlement transaction.
 
-Example:
+### Example Request
 
 ```json
 {
@@ -310,19 +259,25 @@ POST /api/imports/
 
 Creates a new import session and uploads a CSV file.
 
+### Form Data
+
+```text
+file=<csv file>
+group=<group id>
+```
+
 ---
 
 ## Import Session Details
 
 ```http
-GET /api/imports/{import_id}/
+GET /api/imports/{id}/
 ```
 
 Returns:
 
 * Import status
-* Anomalies
-* Review decisions
+* Detected anomalies
 * Import report
 
 ---
@@ -330,12 +285,12 @@ Returns:
 ## Review Import
 
 ```http
-POST /api/imports/{import_id}/review/
+POST /api/imports/{id}/review/
 ```
 
-Used to resolve detected anomalies.
+Processes anomaly review actions.
 
-Example:
+### Example Request
 
 ```json
 {
@@ -347,10 +302,6 @@ Example:
     {
       "row_number": 3,
       "action": "keep_both"
-    },
-    {
-      "row_number": 4,
-      "action": "ignore"
     }
   ]
 }
@@ -364,26 +315,6 @@ Available actions:
 
 ---
 
-# Audit Endpoints
-
-## Audit Log List
-
-```http
-GET /api/audit-logs/
-```
-
-Returns historical system activity.
-
-Examples:
-
-* Expense creation
-* Expense modification
-* Settlement creation
-* Import execution
-* Duplicate resolution
-
----
-
 # Reporting Endpoints
 
 ## Summary Report
@@ -392,65 +323,64 @@ Examples:
 GET /api/reports/summary/
 ```
 
-Returns high-level financial summaries.
-
----
-
-## Category Spend Report
-
-```http
-GET /api/reports/category-spend/
-```
-
-Returns spending grouped by category.
+Returns application-level reporting data.
 
 ---
 
 # Error Responses
 
-Example Validation Error:
+Example:
 
 ```json
 {
-  "detail": "Membership violation detected."
+  "detail": "Validation error."
 }
 ```
 
 Common error categories:
 
 * Authentication Errors
-* Validation Errors
-* Membership Violations
-* Currency Errors
-* Import Errors
 * Permission Errors
+* Validation Errors
+* Import Errors
+* Resource Not Found
 
 ---
 
-# Import Framework Notes
+# CSV Import Workflow
 
-The assignment references a CSV file named:
+The import system follows the workflow below:
 
 ```text
-expenses_export.csv
+Upload
+  ↓
+Parse
+  ↓
+Validate
+  ↓
+Detect Anomalies
+  ↓
+Review
+  ↓
+Import
+  ↓
+Generate Report
 ```
 
-The importer was intentionally designed without hardcoded assumptions about that dataset.
+Potential duplicate records are never automatically removed.
 
-Import behavior is determined through validation rules and anomaly detectors rather than CSV-specific logic.
-
-This allows the official dataset to be imported without requiring application code changes once the file becomes available.
+User review is required before applying anomaly resolution actions.
 
 ---
 
 # API Design Principles
 
-The API was designed around the following principles:
+The API was designed around:
 
+* Simplicity
 * Traceability
 * Auditability
-* Deterministic calculations
-* Explicit validation
-* User-controlled anomaly resolution
+* Explicit Validation
+* User-Controlled Import Decisions
 
-Every financial result returned by the API can be traced back to source transactions.
+All business operations are exposed through RESTful endpoints documented in Swagger.
