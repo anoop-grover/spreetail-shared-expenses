@@ -12,6 +12,14 @@ export default function ImportsPage() {
   const [session, setSession] = useState<ImportSession | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [groups, setGroups] = useState([]);
+
+  useEffect(() => {
+    api("/groups/")
+      .then(setGroups)
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -25,8 +33,20 @@ export default function ImportsPage() {
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      const result = await api<ImportSession>("/imports/", { method: "POST", body: formData, token });
+formData.append("file", file);
+
+if (selectedGroupId) {
+  formData.append("group", String(selectedGroupId));
+}
+
+const result = await api<ImportSession>(
+  "/imports/",
+  {
+    method: "POST",
+    body: formData,
+    token
+  }
+);
       setSession(result);
     } catch (e) {
       alert(e instanceof Error ? e.message : "Upload failed");
@@ -169,7 +189,7 @@ export default function ImportsPage() {
         <div className="imp-card">
           <div className="imp-card-hd">
             <span className="imp-card-title">Upload CSV File</span>
-            <button className="btn-upload" onClick={upload} disabled={!file || uploading}>
+            <button className="btn-upload" onClick={upload} disabled={!file || !selectedGroupId || uploading}>
               <FileUp size={14} />
               {uploading ? "Uploading…" : "Upload"}
             </button>
@@ -186,6 +206,26 @@ export default function ImportsPage() {
             <div className="file-zone-hint">Accepts .csv files only</div>
             {file && <div className="file-chosen">✓ {file.name}</div>}
           </div>
+          <div style={{ marginTop: "1rem" }}>
+  <select
+    value={selectedGroupId ?? ""}
+    onChange={(e) => setSelectedGroupId(Number(e.target.value))}
+    style={{
+      width: "100%",
+      padding: "10px",
+      borderRadius: "8px",
+      border: "1px solid #DDE3F0",
+    }}
+  >
+    <option value="">Select Group</option>
+
+    {groups.map((group: any) => (
+      <option key={group.id} value={group.id}>
+        {group.name}
+      </option>
+    ))}
+  </select>
+</div>
         </div>
 
         {/* Session results card */}
