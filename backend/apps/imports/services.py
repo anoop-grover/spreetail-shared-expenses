@@ -8,7 +8,6 @@ from unittest import result
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
-from requests import session
 
 from apps.expenses.models import Expense, ExpenseHistory, ExpenseParticipant
 from apps.groups.models import Currency, Group, GroupMembership
