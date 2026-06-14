@@ -11,16 +11,16 @@ User = get_user_model()
 class AuthViewSet(viewsets.GenericViewSet):
     permission_classes = [permissions.AllowAny]
 
-    @action(detail=False, methods=["post"])
-    def register(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        return Response(token_payload(user), status=status.HTTP_201_CREATED)
+    def get_serializer_class(self):
+        if self.action == "register":
+            return RegisterSerializer
+        if self.action == "login":
+            return LoginSerializer
+        return RegisterSerializer
 
     @action(detail=False, methods=["post"])
     def login(self, request):
-        serializer = LoginSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(token_payload(serializer.validated_data["user"]))
 
