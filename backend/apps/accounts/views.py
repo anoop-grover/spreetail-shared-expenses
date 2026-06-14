@@ -34,11 +34,11 @@ class AuthViewSet(viewsets.GenericViewSet):
             )
 
     @action(detail=False, methods=["post"])
-        def register(self, request):
-            serializer = RegisterSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            user = serializer.save()
-            return Response(token_payload(user), status=status.HTTP_201_CREATED)
+    def register(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(token_payload(user), status=status.HTTP_201_CREATED)
 
 
 class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
