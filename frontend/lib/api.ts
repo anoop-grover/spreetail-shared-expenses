@@ -87,11 +87,17 @@ export async function api<T>(
   }
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `API request failed with ${response.status}`);
-  }
+  const text = await response.text();
+  throw new Error(
+    text || `API request failed with ${response.status}`
+  );
+}
 
-  return response.json() as Promise<T>;
+const text = await response.text();
+
+return text
+  ? (JSON.parse(text) as T)
+  : (null as T);
 }
 
 export const demoToken = () =>

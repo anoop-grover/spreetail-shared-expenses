@@ -9,6 +9,7 @@ export type Group = {
 
 export type Membership = {
   id: number;
+  user: number;
   user_email: string;
   user_name: string;
   joined_at: string;

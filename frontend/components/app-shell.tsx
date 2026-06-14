@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FileUp, Home, Users, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  FileUp,
+  Home,
+  Users,
+  LogOut,
+  Wallet,
+} from "lucide-react";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
+  const pathname = usePathname();
 
   function logout() {
     localStorage.removeItem("accessToken");
@@ -13,52 +24,95 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }
 
+  const links = [
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: Home,
+    },
+    {
+      href: "/groups",
+      label: "Groups",
+      icon: Users,
+    },
+    {
+      href: "/imports",
+      label: "CSV Import",
+      icon: FileUp,
+    },
+  ];
+
   return (
-    <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-border bg-white p-4 md:block">
-        <div className="mb-8 text-lg font-semibold">
-          Shared Expenses
+    <div className="min-h-screen bg-slate-50">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-white md:flex md:flex-col">
+        {/* Logo */}
+        <div className="border-b border-slate-200 p-6">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary p-2 text-white">
+              <Wallet size={20} />
+            </div>
+
+            <div>
+              <h1 className="font-bold text-slate-900">
+                Shared Expenses
+              </h1>
+
+              <p className="text-xs text-slate-500">
+                Expense Management
+              </p>
+            </div>
+          </div>
         </div>
 
-        <nav className="space-y-1 text-sm">
-          <Link
-            className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-muted"
-            href="/dashboard"
-          >
-            <Home size={16} />
-            Dashboard
-          </Link>
+        {/* Navigation */}
+        <nav className="flex-1 space-y-2 p-4">
+          {links.map((link) => {
+            const Icon = link.icon;
 
-          <Link
-            className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-muted"
-            href="/groups"
-          >
-            <Users size={16} />
-            Groups
-          </Link>
+            const active =
+              pathname === link.href;
 
-          <Link
-            className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-muted"
-            href="/imports"
-          >
-            <FileUp size={16} />
-            CSV Import
-          </Link>
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                  active
+                    ? "bg-primary text-white shadow-md"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <Icon size={18} />
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
+        {/* User section */}
+        <div className="border-t border-slate-200 p-4">
+          <div className="mb-4 rounded-xl bg-slate-50 p-3">
+            <p className="text-sm font-medium text-slate-900">
+              Admin User
+            </p>
+
+            <p className="text-xs text-slate-500">
+              admin@example.com
+            </p>
+          </div>
+
           <button
             onClick={logout}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-600"
           >
-            <LogOut size={16} />
+            <LogOut size={18} />
             Logout
           </button>
         </div>
       </aside>
 
-      <main className="md:pl-60">
-        <div className="mx-auto max-w-7xl p-4 md:p-8">
+      <main className="md:pl-72">
+        <div className="mx-auto max-w-7xl p-6 md:p-10">
           {children}
         </div>
       </main>
