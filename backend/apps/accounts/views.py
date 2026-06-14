@@ -20,9 +20,18 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"])
     def login(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response(token_payload(serializer.validated_data["user"]))
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            return Response(token_payload(serializer.validated_data["user"]))
+        except Exception as e:
+            return Response(
+               {
+                "error": str(e),
+                "type": type(e).__name__
+                },
+                status=500
+            )
 
     @action(detail=False, methods=["post"], url_path="google")
     def google(self, request):
