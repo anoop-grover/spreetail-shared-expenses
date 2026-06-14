@@ -33,20 +33,12 @@ class AuthViewSet(viewsets.GenericViewSet):
                 status=500
             )
 
-    @action(detail=False, methods=["post"], url_path="google")
-    def google(self, request):
-        email = request.data.get("email")
-        google_sub = request.data.get("google_sub")
-        if not email or not google_sub:
-            return Response({"detail": "email and google_sub are required"}, status=status.HTTP_400_BAD_REQUEST)
-        user, _ = User.objects.get_or_create(
-            email=email.lower(),
-            defaults={"full_name": request.data.get("full_name", ""), "google_sub": google_sub},
-        )
-        if not user.google_sub:
-            user.google_sub = google_sub
-            user.save(update_fields=["google_sub"])
-        return Response(token_payload(user))
+    @action(detail=False, methods=["post"])
+        def register(self, request):
+            serializer = RegisterSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
+            return Response(token_payload(user), status=status.HTTP_201_CREATED)
 
 
 class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
