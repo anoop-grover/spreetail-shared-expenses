@@ -13,13 +13,21 @@ export default function ImportsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const [groups, setGroups] = useState([]);
+  type Group = {
+  id: number;
+  name: string;
+};
+
+const [groups, setGroups] = useState<Group[]>([]);
 
   useEffect(() => {
-    api("/groups/")
-      .then(setGroups)
-      .catch(console.error);
-  }, []);
+  api<Group[]>("/groups/")
+    .then((data) => {
+      console.log("Groups API Response:", data);
+      setGroups(data);
+    })
+    .catch(console.error);
+}, []);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
