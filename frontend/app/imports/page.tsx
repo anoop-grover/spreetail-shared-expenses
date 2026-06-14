@@ -26,9 +26,6 @@ export default function ImportsPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      if (selectedGroup) {
-        formData.append("group", String(selectedGroup.id));
-      }
       const result = await api<ImportSession>("/imports/", { method: "POST", body: formData, token });
       setSession(result);
     } catch (e) {
