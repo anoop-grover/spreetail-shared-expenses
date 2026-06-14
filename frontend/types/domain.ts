@@ -2,6 +2,7 @@ export type Group = {
   id: number;
   name: string;
   description: string;
+  default_currency: number;
   default_currency_code: string;
   memberships: Membership[];
 };
